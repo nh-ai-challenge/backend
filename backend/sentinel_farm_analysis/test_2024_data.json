@@ -1,0 +1,170 @@
+[
+  {
+    "month": 1,
+    "date_range": "2024-01-08 to 2024-01-22",
+    "avg_ndvi": 0.13219501078128815,
+    "min_ndvi": -0.3250259459018707,
+    "max_ndvi": 0.6802842020988464,
+    "std_ndvi": 0.12172831594944,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 2,
+    "date_range": "2024-02-08 to 2024-02-22",
+    "avg_ndvi": 0.14343778789043427,
+    "min_ndvi": -0.3495618402957916,
+    "max_ndvi": 0.7070168256759644,
+    "std_ndvi": 0.12170810997486115,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 3,
+    "date_range": "2024-03-08 to 2024-03-22",
+    "avg_ndvi": 0.138540580868721,
+    "min_ndvi": -0.2675301432609558,
+    "max_ndvi": 0.7021598815917969,
+    "std_ndvi": 0.11147851496934891,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 4,
+    "date_range": "2024-04-08 to 2024-04-22",
+    "avg_ndvi": 0.1798766404390335,
+    "min_ndvi": -0.18676123023033142,
+    "max_ndvi": 0.8526548743247986,
+    "std_ndvi": 0.1442636400461197,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 5,
+    "date_range": "2024-05-08 to 2024-05-22",
+    "avg_ndvi": 0.2082742601633072,
+    "min_ndvi": -0.11135490983724594,
+    "max_ndvi": 0.8646532297134399,
+    "std_ndvi": 0.14356903731822968,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 6,
+    "date_range": "2024-06-08 to 2024-06-22",
+    "avg_ndvi": 0.21939021348953247,
+    "min_ndvi": -0.22998586297035217,
+    "max_ndvi": 0.8753564357757568,
+    "std_ndvi": 0.1514081507921219,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 7,
+    "date_range": "2024-07-08 to 2024-07-22",
+    "avg_ndvi": 0.0,
+    "min_ndvi": 0.0,
+    "max_ndvi": 0.0,
+    "std_ndvi": 0.0,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 8,
+    "date_range": "2024-08-08 to 2024-08-22",
+    "avg_ndvi": 0.1396041065454483,
+    "min_ndvi": -0.24089853465557098,
+    "max_ndvi": 0.7846153974533081,
+    "std_ndvi": 0.14081911742687225,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 9,
+    "date_range": "2024-09-08 to 2024-09-22",
+    "avg_ndvi": 0.19116821885108948,
+    "min_ndvi": -0.307297021150589,
+    "max_ndvi": 0.8708717823028564,
+    "std_ndvi": 0.1727914810180664,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 10,
+    "date_range": "2024-10-08 to 2024-10-22",
+    "avg_ndvi": 0.18808002769947052,
+    "min_ndvi": -0.33532121777534485,
+    "max_ndvi": 0.7589898705482483,
+    "std_ndvi": 0.14675600826740265,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 11,
+    "date_range": "2024-11-08 to 2024-11-22",
+    "avg_ndvi": 0.16021685302257538,
+    "min_ndvi": -0.3684922158718109,
+    "max_ndvi": 0.7370424866676331,
+    "std_ndvi": 0.1389179527759552,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  },
+  {
+    "month": 12,
+    "date_range": "2024-12-08 to 2024-12-22",
+    "avg_ndvi": 0.15234243869781494,
+    "min_ndvi": -0.35087719559669495,
+    "max_ndvi": 0.746654748916626,
+    "std_ndvi": 0.13983650505542755,
+    "pixel_count": 2500,
+    "array_shape": [
+      50,
+      50
+    ],
+    "status": "success"
+  }
+]
