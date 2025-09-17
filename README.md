@@ -49,13 +49,6 @@ backend/
 - **ASGI Server**: Uvicorn
 - **Testing**: Pytest
 
-## 주요 기능
-
-- 농업 기상 데이터 조회 (공공데이터포털 API 연동)
-- Sentinel 위성 영상 분석 (NDVI 등 식생 지수)
-- PostgreSQL 데이터베이스 연동
-- RESTful API 제공
-
 ## 설치 및 실행
 
 ### 1. PostgreSQL 설치 및 설정
