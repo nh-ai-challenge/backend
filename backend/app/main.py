@@ -3,23 +3,31 @@ FastAPI 메인 애플리케이션
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from contextlib import asynccontextmanager
+import secrets
 
 from app.core.config import settings
-from app.api.v1 import health
+from app.core.database import init_db, close_db
+from app.api.v1 import api_v1_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 시작/종료 시 실행되는 이벤트"""
-    # 시작 시
     print("Starting up...")
     print(f"API Title: {settings.PROJECT_NAME}")
     print(f"Environment: {settings.ENVIRONMENT}")
     print(f"API Version: {settings.API_V1_STR}")
+    
+    await init_db()
+    print("Database initialized")
+    
     yield
-    # 종료 시
+    
     print("Shutting down...")
+    await close_db()
+    print("Database connection closed")
 
 
 # FastAPI 앱 인스턴스 생성
@@ -32,6 +40,16 @@ app = FastAPI(
     redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
 )
 
+# 세션 미들웨어 설정 (CORS보다 먼저 추가해야 함)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=secrets.token_urlsafe(32),
+    session_cookie="nh_session",
+    max_age=3600 * 24,  # 24시간
+    same_site="lax",
+    https_only=False  # 개발 환경에서는 False, 프로덕션에서는 True
+)
+
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
@@ -42,7 +60,7 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(health.router, prefix=settings.API_V1_STR, tags=["health"])
+app.include_router(api_v1_router)
 
 
 @app.get("/", tags=["root"])
