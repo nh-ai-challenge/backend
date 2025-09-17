@@ -1,12 +1,13 @@
+
 from typing import Dict, Any, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.models.profile_v2 import SeniorProfileV2, YouthProfileV2, YouthVisionProfile
+from app.models.profile import SeniorProfile, YouthProfile, YouthVisionProfile
 from app.models.user import User
 from uuid import UUID
 
 
-class SurveyV2Service:
+class SurveyService:
     
     @staticmethod
     def calculate_scores_from_senior_survey(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -95,12 +96,12 @@ class SurveyV2Service:
         db: AsyncSession, 
         user_id: UUID,
         data: Dict[str, Any]
-    ) -> SeniorProfileV2:
-        stmt = select(SeniorProfileV2).where(SeniorProfileV2.user_id == user_id)
+    ) -> SeniorProfile:
+        stmt = select(SeniorProfile).where(SeniorProfile.user_id == user_id)
         result = await db.execute(stmt)
         profile = result.scalar_one_or_none()
         
-        scores = SurveyV2Service.calculate_scores_from_senior_survey(data)
+        scores = SurveyService.calculate_scores_from_senior_survey(data)
         
         if profile:
             profile.basic_info = data.get("basic_info", {})
@@ -111,7 +112,7 @@ class SurveyV2Service:
             for key, value in scores.items():
                 setattr(profile, key, value)
         else:
-            profile = SeniorProfileV2(
+            profile = SeniorProfile(
                 user_id=user_id,
                 basic_info=data.get("basic_info", {}),
                 successor_pref=data.get("successor_pref", {}),
@@ -130,12 +131,12 @@ class SurveyV2Service:
         db: AsyncSession,
         user_id: UUID,
         data: Dict[str, Any]
-    ) -> YouthProfileV2:
-        stmt = select(YouthProfileV2).where(YouthProfileV2.user_id == user_id)
+    ) -> YouthProfile:
+        stmt = select(YouthProfile).where(YouthProfile.user_id == user_id)
         result = await db.execute(stmt)
         profile = result.scalar_one_or_none()
         
-        scores = SurveyV2Service.calculate_scores_from_youth_survey(data)
+        scores = SurveyService.calculate_scores_from_youth_survey(data)
         
         if profile:
             profile.basic_info = data.get("basic_info", {})
@@ -146,7 +147,7 @@ class SurveyV2Service:
             for key, value in scores.items():
                 setattr(profile, key, value)
         else:
-            profile = YouthProfileV2(
+            profile = YouthProfile(
                 user_id=user_id,
                 basic_info=data.get("basic_info", {}),
                 vision_info=data.get("vision_info", {}),
@@ -198,14 +199,14 @@ class SurveyV2Service:
         return profile
     
     @staticmethod
-    async def get_senior_profile(db: AsyncSession, user_id: UUID) -> Optional[SeniorProfileV2]:
-        stmt = select(SeniorProfileV2).where(SeniorProfileV2.user_id == user_id)
+    async def get_senior_profile(db: AsyncSession, user_id: UUID) -> Optional[SeniorProfile]:
+        stmt = select(SeniorProfile).where(SeniorProfile.user_id == user_id)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
     
     @staticmethod
-    async def get_youth_profile(db: AsyncSession, user_id: UUID) -> Optional[YouthProfileV2]:
-        stmt = select(YouthProfileV2).where(YouthProfileV2.user_id == user_id)
+    async def get_youth_profile(db: AsyncSession, user_id: UUID) -> Optional[YouthProfile]:
+        stmt = select(YouthProfile).where(YouthProfile.user_id == user_id)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
     

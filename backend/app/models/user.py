@@ -23,10 +23,6 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    surveys = relationship("Survey", back_populates="user", cascade="all, delete-orphan")
-    persona = relationship("Persona", back_populates="user", uselist=False, cascade="all, delete-orphan")
     senior_profile = relationship("SeniorProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     youth_profile = relationship("YouthProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    senior_profile_v2 = relationship("SeniorProfileV2", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    youth_profile_v2 = relationship("YouthProfileV2", back_populates="user", uselist=False, cascade="all, delete-orphan")
     youth_vision_profile = relationship("YouthVisionProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")

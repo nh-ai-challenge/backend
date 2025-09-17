@@ -1,124 +1,156 @@
-from typing import List
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Dict, Any
+from uuid import UUID
+
 from app.core.database import get_db
+from app.models.user import User, UserType
+from app.api.deps import get_current_user
 from app.schemas.survey import (
-    SurveySubmit, 
-    SurveyResponse, 
-    PersonaResponse,
-    QuestionResponse
+    SeniorSurveySection,
+    YouthSurveySection,
+    VisionProfileRequest,
+    SeniorProfileResponse,
+    YouthProfileResponse,
+    VisionProfileResponse,
+    SurveySubmissionResult
 )
-from app.services.persona import PersonaService
-from app.services.auth import AuthService
-from app.data.questions import get_questions_by_user_type, SENIOR_QUESTIONS, YOUTH_QUESTIONS
+from app.services.survey import SurveyService
 
-router = APIRouter(prefix="/surveys", tags=["Surveys"])
+router = APIRouter(prefix="/surveys", tags=["surveys"])
 
 
-async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)):
-    user_id = request.session.get("user_id")
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
-        )
-    
-    user = await AuthService.get_user_by_id(db, UUID(user_id))
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-    
-    return user
-
-
-@router.get("/questions", response_model=List[QuestionResponse])
-async def get_survey_questions(
-    request: Request,
+@router.post("/senior", response_model=SurveySubmissionResult)
+async def submit_senior_survey(
+    data: SeniorSurveySection,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    user = await get_current_user(request, db)
-    questions = get_questions_by_user_type(user.user_type)
+    if current_user.user_type != UserType.SENIOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only senior users can submit senior surveys"
+        )
     
-    response = []
-    for q in questions:
-        response.append(QuestionResponse(
-            id=q['id'],
-            section=q['section'],
-            text=q['text'],
-            type=q['type'],
-            options=q.get('options'),
-            dimension=q.get('dimension'),
-            order=q['order']
-        ))
-    
-    return response
-
-
-@router.post("/submit", response_model=List[SurveyResponse])
-async def submit_survey(
-    survey_data: SurveySubmit,
-    request: Request,
-    db: AsyncSession = Depends(get_db)
-):
-    user = await get_current_user(request, db)
-    
-    questions = get_questions_by_user_type(user.user_type)
-    question_map = {q['id']: q for q in questions}
-    
-    processed_answers = []
-    for answer in survey_data.answers:
-        question = question_map.get(answer.question_id)
-        if question:
-            score = None
-            if question.get('scoring') and answer.answer in question['scoring']:
-                score = question['scoring'][answer.answer]
-            
-            processed_answers.append({
-                'question_id': answer.question_id,
-                'question_text': answer.question_text,
-                'answer': answer.answer,
-                'score': score,
-                'dimension': question.get('dimension')
-            })
-    
-    saved_surveys = await PersonaService.save_survey_answers(
-        db, user.id, processed_answers
+    profile = await SurveyService.save_senior_profile(
+        db, current_user.id, data.model_dump()
     )
     
-    await PersonaService.calculate_persona_from_surveys(db, user.id)
-    
-    return saved_surveys
+    return SurveySubmissionResult(
+        profile_id=profile.id,
+        philosophy_score=profile.philosophy_score or 50.0,
+        experience_score=float(profile.experience_required * 20) if profile.experience_required else None,
+        financial_score=float((profile.price_min + profile.price_max) / 20000) if profile.price_min else None,
+        timeline_score=float(100 - (profile.timeline_months * 2.5)) if profile.timeline_months else None,
+        mentorship_score=100.0 if profile.mentoring_willingness else 50.0,
+        message="시니어 프로필이 성공적으로 저장되었습니다."
+    )
 
 
-@router.get("/my-results", response_model=PersonaResponse)
-async def get_my_survey_results(
-    request: Request,
+@router.post("/youth", response_model=SurveySubmissionResult)
+async def submit_youth_survey(
+    data: YouthSurveySection,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    user = await get_current_user(request, db)
+    if current_user.user_type != UserType.YOUTH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only youth users can submit youth surveys"
+        )
     
-    persona = await PersonaService.get_user_persona(db, user.id)
-    if not persona:
+    profile = await SurveyService.save_youth_profile(
+        db, current_user.id, data.model_dump()
+    )
+    
+    return SurveySubmissionResult(
+        profile_id=profile.id,
+        philosophy_score=profile.philosophy_score or 50.0,
+        experience_score=float(profile.experience_level * 10) if profile.experience_level else None,
+        financial_score=float((profile.capital_min + profile.capital_max) / 20000) if profile.capital_min else None,
+        timeline_score=float(100 - (profile.timeline_months * 2.5)) if profile.timeline_months else None,
+        mentorship_score=float(profile.mentorship_need_level * 20) if profile.mentorship_need_level else None,
+        message="청년 프로필이 성공적으로 저장되었습니다."
+    )
+
+
+@router.post("/vision-profile", response_model=VisionProfileResponse)
+async def submit_vision_profile(
+    data: VisionProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.user_type != UserType.YOUTH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only youth users can submit vision profiles"
+        )
+    
+    profile = await SurveyService.save_vision_profile(
+        db, current_user.id, data.model_dump()
+    )
+    
+    return VisionProfileResponse.model_validate(profile)
+
+
+@router.get("/senior/profile", response_model=SeniorProfileResponse)
+async def get_senior_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.user_type != UserType.SENIOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only senior users can access senior profiles"
+        )
+    
+    profile = await SurveyService.get_senior_profile(db, current_user.id)
+    if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Survey results not found. Please complete the survey first."
+            detail="Senior profile not found"
         )
     
-    persona_info = PersonaService.get_persona_description(persona.persona_type)
+    return SeniorProfileResponse.model_validate(profile)
+
+
+@router.get("/youth/profile", response_model=YouthProfileResponse)
+async def get_youth_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.user_type != UserType.YOUTH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only youth users can access youth profiles"
+        )
     
-    return PersonaResponse(
-        id=persona.id,
-        user_id=persona.user_id,
-        persona_type=persona.persona_type,
-        persona_name=persona_info['name'],
-        persona_description=persona_info['description'],
-        philosophy_score=persona.philosophy_score,
-        business_score=persona.business_score,
-        mentorship_score=persona.mentorship_score,
-        finance_score=persona.finance_score,
-        created_at=persona.created_at,
-        updated_at=persona.updated_at
-    )
+    profile = await SurveyService.get_youth_profile(db, current_user.id)
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Youth profile not found"
+        )
+    
+    return YouthProfileResponse.model_validate(profile)
+
+
+@router.get("/vision-profile", response_model=VisionProfileResponse)
+async def get_vision_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.user_type != UserType.YOUTH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only youth users can access vision profiles"
+        )
+    
+    profile = await SurveyService.get_vision_profile(db, current_user.id)
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vision profile not found"
+        )
+    
+    return VisionProfileResponse.model_validate(profile)
