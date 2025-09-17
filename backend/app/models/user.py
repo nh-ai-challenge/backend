@@ -2,6 +2,7 @@ from enum import Enum
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 import uuid
 
@@ -21,3 +22,6 @@ class User(Base):
     user_type = Column(SQLEnum(UserType), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    surveys = relationship("Survey", back_populates="user", cascade="all, delete-orphan")
+    persona = relationship("Persona", back_populates="user", uselist=False, cascade="all, delete-orphan")
