@@ -22,27 +22,8 @@ class Settings(BaseSettings):
     PORT: int = 8000
     
     # 데이터베이스
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_PORT: str = "5432"
-    POSTGRES_DB: str = "nh_challenge"
-    DATABASE_URL: Optional[PostgresDsn] = None
-    
-    @field_validator("DATABASE_URL", mode="before")
-    @classmethod
-    def assemble_db_connection(cls, v: Optional[str], values) -> str:
-        if isinstance(v, str):
-            return v
-        # DATABASE_URL이 없으면 개별 설정으로 조합
-        user = values.data.get("POSTGRES_USER")
-        password = values.data.get("POSTGRES_PASSWORD")
-        server = values.data.get("POSTGRES_SERVER")
-        port = values.data.get("POSTGRES_PORT")
-        db = values.data.get("POSTGRES_DB")
-        return f"postgresql+asyncpg://{user}:{password}@{server}:{port}/{db}"
-    
-    # CORS 설정
+    DATABASE_URL: str
+
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000", "http://localhost:8000"]
     
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
@@ -62,7 +43,7 @@ class Settings(BaseSettings):
     
     class Config:
         # .env 파일 경로 설정
-        env_file = Path(__file__).parent.parent.parent / ".env"
+        env_file = Path(__file__).parent.parent.parent.parent / ".env"  # 루트의 .env
         env_file_encoding = "utf-8"
         case_sensitive = True
 
