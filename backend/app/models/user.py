@@ -26,3 +26,6 @@ class User(Base):
     senior_profile = relationship("SeniorProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     youth_profile = relationship("YouthProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     youth_vision_profile = relationship("YouthVisionProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    
+    senior_matches = relationship("Match", foreign_keys="Match.senior_id", back_populates="senior")
+    youth_matches = relationship("Match", foreign_keys="Match.youth_id", back_populates="youth")

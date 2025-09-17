@@ -6,7 +6,7 @@ import math
 
 from app.models.user import User, UserType
 from app.models.profile import SeniorProfile, YouthProfile
-from app.models.matching import MatchingScore
+from app.models.matching import MatchingScore, Match, MatchStatus
 
 
 class MatchingEngine:
@@ -347,3 +347,129 @@ class MatchingEngine:
         matches.sort(key=lambda x: x.sci_total_score, reverse=True)
         
         return matches[:limit]
+    
+    @staticmethod
+    async def create_or_update_match(
+        db: AsyncSession,
+        senior_profile: SeniorProfile,
+        youth_profile: YouthProfile,
+        persona_types: Optional[Dict[str, str]] = None
+    ) -> Match:
+        philosophy = MatchingEngine.calculate_philosophy_compatibility(
+            senior_profile.philosophy_score or 50,
+            youth_profile.philosophy_score or 50
+        )
+        
+        business = MatchingEngine.calculate_experience_compatibility(
+            senior_profile.experience_required,
+            youth_profile.experience_level
+        )
+        
+        finance = MatchingEngine.calculate_financial_compatibility(
+            senior_profile.price_min,
+            senior_profile.price_max,
+            youth_profile.capital_min,
+            youth_profile.capital_max
+        )
+        
+        mentorship = MatchingEngine.calculate_mentorship_compatibility(
+            senior_profile.mentoring_willingness,
+            youth_profile.mentorship_need_level
+        )
+        
+        sci_score = (
+            philosophy * 0.4 +
+            business * 0.2 +
+            mentorship * 0.2 +
+            finance * 0.2
+        )
+        
+        location_distance = MatchingEngine.calculate_location_bonus(
+            senior_profile.basic_info.get("location") if senior_profile.basic_info else None,
+            youth_profile.basic_info.get("location") if youth_profile.basic_info else None
+        )
+        
+        crop_match = bool(MatchingEngine.calculate_crop_bonus(
+            senior_profile.basic_info.get("main_crop") if senior_profile.basic_info else None,
+            youth_profile.basic_info.get("desired_crop") if youth_profile.basic_info else None
+        ))
+        
+        stmt = select(Match).where(
+            and_(
+                Match.senior_id == senior_profile.user_id,
+                Match.youth_id == youth_profile.user_id
+            )
+        )
+        result = await db.execute(stmt)
+        match = result.scalar_one_or_none()
+        
+        if match:
+            match.sci_score = sci_score
+            match.philosophy_compatibility = philosophy
+            match.business_compatibility = business
+            match.mentorship_compatibility = mentorship
+            match.finance_compatibility = finance
+            match.location_distance_km = location_distance * 10
+            match.crop_match = crop_match
+            match.ai_recommendation = MatchingEngine.get_ai_recommendation(sci_score)
+            match.compatibility_details = MatchingEngine.generate_insights(
+                philosophy, business, finance, 
+                MatchingEngine.calculate_timeline_compatibility(
+                    senior_profile.timeline_months,
+                    youth_profile.timeline_months
+                ), 
+                mentorship
+            )
+            if persona_types:
+                match.senior_persona_type = persona_types.get("senior")
+                match.youth_persona_type = persona_types.get("youth")
+        else:
+            match = Match(
+                senior_id=senior_profile.user_id,
+                youth_id=youth_profile.user_id,
+                sci_score=sci_score,
+                philosophy_compatibility=philosophy,
+                business_compatibility=business,
+                mentorship_compatibility=mentorship,
+                finance_compatibility=finance,
+                status=MatchStatus.PENDING,
+                senior_persona_type=persona_types.get("senior") if persona_types else None,
+                youth_persona_type=persona_types.get("youth") if persona_types else None,
+                location_distance_km=location_distance * 10,
+                crop_match=crop_match,
+                ai_recommendation=MatchingEngine.get_ai_recommendation(sci_score),
+                compatibility_details=MatchingEngine.generate_insights(
+                    philosophy, business, finance,
+                    MatchingEngine.calculate_timeline_compatibility(
+                        senior_profile.timeline_months,
+                        youth_profile.timeline_months
+                    ),
+                    mentorship
+                )
+            )
+            db.add(match)
+        
+        await db.commit()
+        await db.refresh(match)
+        return match
+    
+    @staticmethod
+    async def get_recommendations(
+        db: AsyncSession,
+        user_id: UUID,
+        user_type: UserType,
+        limit: int = 10
+    ) -> List[Match]:
+        if user_type == UserType.SENIOR:
+            stmt = select(Match).where(
+                Match.senior_id == user_id
+            ).order_by(desc(Match.sci_score)).limit(limit)
+        else:
+            stmt = select(Match).where(
+                Match.youth_id == user_id
+            ).order_by(desc(Match.sci_score)).limit(limit)
+        
+        result = await db.execute(stmt)
+        matches = result.scalars().all()
+        
+        return matches
