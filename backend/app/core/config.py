@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     SENTINEL_CLIENT_ID: Optional[str] = None
     SENTINEL_CLIENT_SECRET: Optional[str] = None
     
+    # AI 서비스 API 키
+    GEMINI_API_KEY: Optional[str] = None
+    
     class Config:
         # .env 파일 경로 설정
         env_file = Path(__file__).parent.parent.parent.parent / ".env"  # 루트의 .env
