@@ -46,6 +46,8 @@ class SeniorProfileResponse(ProfileResponseBase):
     price_max: Optional[int]
     timeline_months: Optional[int]
     mentoring_willingness: Optional[bool]
+    profile_text: Optional[str]
+    embedding_updated_at: Optional[datetime]
     
     class Config:
         from_attributes = True
@@ -62,6 +64,8 @@ class YouthProfileResponse(ProfileResponseBase):
     capital_max: Optional[int]
     timeline_months: Optional[int]
     mentorship_need_level: Optional[int]
+    profile_text: Optional[str]
+    embedding_updated_at: Optional[datetime]
     
     class Config:
         from_attributes = True
@@ -79,6 +83,17 @@ class VisionProfileResponse(ProfileResponseBase):
     
     class Config:
         from_attributes = True
+
+
+class ProfileTextUpdate(BaseModel):
+    profile_text: str = Field(..., min_length=10, max_length=2000, description="프로필 자기소개 텍스트")
+
+
+class ProfileTextResponse(BaseModel):
+    profile_text: Optional[str]
+    embedding_updated_at: Optional[datetime]
+    has_embedding: bool
+    message: str
 
 
 class SurveySubmissionResult(BaseModel):

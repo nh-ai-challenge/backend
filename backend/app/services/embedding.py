@@ -68,6 +68,33 @@ class EmbeddingService:
         return None
     
     @classmethod
+    async def update_profile_embedding_async(cls, db, user_id: str, user_type: UserType, profile_text: str):
+        from sqlalchemy import select
+        
+        embedding = cls.generate_embedding(profile_text)
+        
+        if user_type == UserType.SENIOR:
+            result = await db.execute(
+                select(SeniorProfile).where(SeniorProfile.user_id == user_id)
+            )
+            profile = result.scalar_one_or_none()
+        else:
+            result = await db.execute(
+                select(YouthProfile).where(YouthProfile.user_id == user_id)
+            )
+            profile = result.scalar_one_or_none()
+        
+        if profile:
+            profile.profile_text = profile_text
+            profile.embedding = embedding
+            profile.embedding_updated_at = datetime.utcnow()
+            await db.commit()
+            logger.info(f"Updated embedding for {user_type.value} user {user_id}")
+            return profile
+        
+        return None
+    
+    @classmethod
     def find_similar_profiles(
         cls, 
         db: Session, 
