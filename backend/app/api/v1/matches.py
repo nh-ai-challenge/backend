@@ -17,6 +17,7 @@ from app.schemas.matching import (
     MatchStatusUpdate
 )
 from app.services.matching import MatchingEngine
+from app.services.gemini import GeminiService
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -143,11 +144,12 @@ async def get_match_recommendations(
     ]
 
 
-@router.get("/{match_id}", response_model=MatchDetailResponse)
+@router.get("/{match_id}")
 async def get_match_detail(
     match_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    generate_explanation: bool = Query(True, description="AI 설명 생성 여부")
 ):
     stmt = select(Match).where(
         and_(
@@ -173,33 +175,77 @@ async def get_match_detail(
     partner_result = await db.execute(partner_stmt)
     partner = partner_result.scalar_one()
     
-    return MatchDetailResponse(
-        match_id=match.id,
-        partner_id=partner.id,
-        partner_name=partner.name,
-        partner_type=partner.user_type,
-        sci_score=match.sci_score,
-        philosophy_compatibility=match.philosophy_compatibility,
-        business_compatibility=match.business_compatibility,
-        mentorship_compatibility=match.mentorship_compatibility,
-        finance_compatibility=match.finance_compatibility,
-        senior_persona_type=match.senior_persona_type,
-        youth_persona_type=match.youth_persona_type,
-        location_distance_km=match.location_distance_km,
-        crop_match=match.crop_match,
-        compatibility_details=match.compatibility_details,
-        ai_recommendation=match.ai_recommendation,
-        status=match.status,
-        created_at=match.created_at,
-        updated_at=match.updated_at
-    )
+    # AI 설명 생성 (선택적)
+    ai_explanation = None
+    if generate_explanation:
+        # 시니어와 청년 프로필 가져오기
+        senior_stmt = select(SeniorProfile).where(SeniorProfile.user_id == match.senior_id)
+        senior_result = await db.execute(senior_stmt)
+        senior_profile = senior_result.scalar_one_or_none()
+        
+        youth_stmt = select(YouthProfile).where(YouthProfile.user_id == match.youth_id)
+        youth_result = await db.execute(youth_stmt)
+        youth_profile = youth_result.scalar_one_or_none()
+        
+        if senior_profile and youth_profile:
+            # Gemini로 매칭 설명 생성
+            ai_explanation = GeminiService.generate_match_explanation(
+                senior_profile={
+                    "basic_info": senior_profile.basic_info,
+                    "successor_pref": senior_profile.successor_pref,
+                    "conditions": senior_profile.conditions,
+                    "vision": senior_profile.vision,
+                    "profile_text": senior_profile.profile_text
+                },
+                youth_profile={
+                    "basic_info": youth_profile.basic_info,
+                    "vision_info": youth_profile.vision_info,
+                    "partnership": youth_profile.partnership,
+                    "finance": youth_profile.finance,
+                    "profile_text": youth_profile.profile_text
+                },
+                sci_score=match.sci_score,
+                compatibility_details={
+                    "philosophy": match.philosophy_compatibility,
+                    "business": match.business_compatibility,
+                    "mentorship": match.mentorship_compatibility,
+                    "finance": match.finance_compatibility
+                }
+            )
+    
+    return {
+        "match_id": match.id,
+        "partner_id": partner.id,
+        "partner_name": partner.name,
+        "partner_type": partner.user_type.value,
+        "sci_score": match.sci_score,
+        "compatibility": {
+            "philosophy": match.philosophy_compatibility,
+            "business": match.business_compatibility,
+            "mentorship": match.mentorship_compatibility,
+            "finance": match.finance_compatibility
+        },
+        "persona_types": {
+            "senior": match.senior_persona_type,
+            "youth": match.youth_persona_type
+        },
+        "location_distance_km": match.location_distance_km,
+        "crop_match": match.crop_match,
+        "basic_insights": match.compatibility_details,
+        "ai_level": match.ai_recommendation,
+        "ai_explanation": ai_explanation or "AI 설명을 생성할 수 없습니다",
+        "status": match.status.value,
+        "created_at": match.created_at,
+        "updated_at": match.updated_at
+    }
 
 
-@router.post("/calculate", response_model=MatchCalculateResponse)
+@router.post("/calculate")
 async def calculate_match_score(
     request: MatchCalculateRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    generate_explanation: bool = Query(True, description="AI 설명 생성 여부")
 ):
     if request.senior_id == request.youth_id:
         raise HTTPException(
@@ -237,18 +283,50 @@ async def calculate_match_score(
         db, senior_profile, youth_profile
     )
     
-    return MatchCalculateResponse(
-        match_id=match.id,
-        senior_id=match.senior_id,
-        youth_id=match.youth_id,
-        sci_score=match.sci_score,
-        philosophy_compatibility=match.philosophy_compatibility,
-        business_compatibility=match.business_compatibility,
-        mentorship_compatibility=match.mentorship_compatibility,
-        finance_compatibility=match.finance_compatibility,
-        ai_recommendation=match.ai_recommendation,
-        compatibility_details=match.compatibility_details
-    )
+    # AI 설명 생성
+    ai_explanation = None
+    if generate_explanation and senior_profile and youth_profile:
+        ai_explanation = GeminiService.generate_match_explanation(
+            senior_profile={
+                "basic_info": senior_profile.basic_info,
+                "successor_pref": senior_profile.successor_pref,
+                "conditions": senior_profile.conditions,
+                "vision": senior_profile.vision,
+                "profile_text": senior_profile.profile_text
+            },
+            youth_profile={
+                "basic_info": youth_profile.basic_info,
+                "vision_info": youth_profile.vision_info,
+                "partnership": youth_profile.partnership,
+                "finance": youth_profile.finance,
+                "profile_text": youth_profile.profile_text
+            },
+            sci_score=match.sci_score,
+            compatibility_details={
+                "philosophy": match.philosophy_compatibility,
+                "business": match.business_compatibility,
+                "mentorship": match.mentorship_compatibility,
+                "finance": match.finance_compatibility
+            }
+        )
+    
+    return {
+        "match_id": match.id,
+        "senior_id": match.senior_id,
+        "youth_id": match.youth_id,
+        "sci_score": match.sci_score,
+        "compatibility": {
+            "philosophy": match.philosophy_compatibility,
+            "business": match.business_compatibility,
+            "mentorship": match.mentorship_compatibility,
+            "finance": match.finance_compatibility
+        },
+        "ai_level": match.ai_recommendation,
+        "basic_insights": match.compatibility_details,
+        "ai_explanation": ai_explanation or "매칭 설명을 생성할 수 없습니다",
+        "status": match.status.value,
+        "created_at": match.created_at
+    }
 
 
 @router.put("/{match_id}/status")
