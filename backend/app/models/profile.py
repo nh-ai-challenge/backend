@@ -24,6 +24,10 @@ class SeniorProfile(Base):
     timeline_months = Column(Integer)
     mentoring_willingness = Column(Boolean, default=False)
     
+    profile_text = Column(Text)
+    embedding = Column(JSON)
+    embedding_updated_at = Column(DateTime)
+    
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
@@ -47,6 +51,10 @@ class YouthProfile(Base):
     capital_max = Column(Integer)
     timeline_months = Column(Integer)
     mentorship_need_level = Column(Integer)
+    
+    profile_text = Column(Text)
+    embedding = Column(JSON)
+    embedding_updated_at = Column(DateTime)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
