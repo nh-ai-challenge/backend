@@ -3,10 +3,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc
 from uuid import UUID
 import math
+import json
+import numpy as np
 
 from app.models.user import User, UserType
 from app.models.profile import SeniorProfile, YouthProfile
 from app.models.matching import MatchingScore, Match, MatchStatus
+from app.services.embedding import EmbeddingService
+from app.services.gemini import GeminiService
 
 
 class MatchingEngine:
@@ -473,3 +477,108 @@ class MatchingEngine:
         matches = result.scalars().all()
         
         return matches
+    
+    @staticmethod
+    async def get_hybrid_recommendations(
+        db: AsyncSession,
+        user_id: UUID,
+        user_type: UserType,
+        limit: int = 10,
+        min_embedding_similarity: float = 0.6,
+        embedding_weight: float = 0.3
+    ) -> List[Dict[str, Any]]:
+        """하이브리드 매칭: 임베딩 유사도 + SCI 점수"""
+        
+        # 1. 사용자 프로필 가져오기
+        if user_type == UserType.SENIOR:
+            user_result = await db.execute(
+                select(SeniorProfile).where(SeniorProfile.user_id == user_id)
+            )
+            user_profile = user_result.scalar_one_or_none()
+            target_model = YouthProfile
+        else:
+            user_result = await db.execute(
+                select(YouthProfile).where(YouthProfile.user_id == user_id)
+            )
+            user_profile = user_result.scalar_one_or_none()
+            target_model = SeniorProfile
+        
+        if not user_profile or not user_profile.embedding:
+            # 임베딩이 없으면 기존 SCI 매칭으로 대체
+            matches = await MatchingEngine.get_recommendations(db, user_id, user_type, limit)
+            return [{"match": match, "hybrid_score": match.sci_score} for match in matches]
+        
+        # 2. 임베딩 기반 후보 필터링 (1차 필터)
+        candidates_result = await db.execute(
+            select(target_model).where(target_model.embedding != None)
+        )
+        candidates = candidates_result.scalars().all()
+        
+        embedding_scores = []
+        for candidate in candidates:
+            if candidate.embedding:
+                similarity = EmbeddingService.calculate_similarity(
+                    user_profile.embedding,
+                    candidate.embedding
+                )
+                if similarity >= min_embedding_similarity:
+                    embedding_scores.append({
+                        "profile": candidate,
+                        "embedding_similarity": similarity
+                    })
+        
+        # 3. 상위 후보들에 대해 SCI 계산 (2차 계산)
+        embedding_scores.sort(key=lambda x: x["embedding_similarity"], reverse=True)
+        top_candidates = embedding_scores[:limit * 2]  # 2배수로 후보 선정
+        
+        hybrid_results = []
+        for candidate_info in top_candidates:
+            candidate = candidate_info["profile"]
+            
+            # SCI 점수 계산
+            if user_type == UserType.SENIOR:
+                match_score = await MatchingEngine.calculate_match(db, user_profile, candidate)
+            else:
+                match_score = await MatchingEngine.calculate_match(db, candidate, user_profile)
+            
+            # 하이브리드 점수 계산
+            hybrid_score = (
+                match_score.sci_total_score * (1 - embedding_weight) +
+                candidate_info["embedding_similarity"] * 100 * embedding_weight
+            )
+            
+            # Gemini로 매칭 설명 생성
+            explanation = None
+            if user_profile.profile_text and candidate.profile_text:
+                explanation = GeminiService.generate_match_explanation(
+                    senior_profile=user_profile.__dict__ if user_type == UserType.SENIOR else candidate.__dict__,
+                    youth_profile=candidate.__dict__ if user_type == UserType.SENIOR else user_profile.__dict__,
+                    sci_score=match_score.sci_total_score,
+                    compatibility_details={
+                        "philosophy": match_score.philosophy_score,
+                        "business": match_score.experience_score,
+                        "mentorship": match_score.mentorship_score,
+                        "finance": match_score.financial_score
+                    }
+                )
+            
+            hybrid_results.append({
+                "candidate_id": candidate.user_id,
+                "candidate_profile": candidate,
+                "sci_score": match_score.sci_total_score,
+                "embedding_similarity": candidate_info["embedding_similarity"],
+                "hybrid_score": hybrid_score,
+                "compatibility_details": {
+                    "philosophy": match_score.philosophy_score,
+                    "experience": match_score.experience_score,
+                    "financial": match_score.financial_score,
+                    "timeline": match_score.timeline_score,
+                    "mentorship": match_score.mentorship_score
+                },
+                "ai_explanation": explanation
+            })
+        
+        # 4. 하이브리드 점수로 정렬
+        hybrid_results.sort(key=lambda x: x["hybrid_score"], reverse=True)
+        
+        return hybrid_results[:limit]

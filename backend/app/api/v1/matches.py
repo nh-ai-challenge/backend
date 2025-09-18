@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 from app.core.database import get_db
@@ -19,6 +19,72 @@ from app.schemas.matching import (
 from app.services.matching import MatchingEngine
 
 router = APIRouter(prefix="/matches", tags=["matches"])
+
+
+@router.get("/recommendations/hybrid")
+async def get_hybrid_recommendations(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(10, ge=1, le=50, description="Number of recommendations"),
+    min_similarity: float = Query(0.6, ge=0.0, le=1.0, description="Minimum embedding similarity"),
+    embedding_weight: float = Query(0.3, ge=0.0, le=1.0, description="Weight for embedding score")
+) -> List[Dict[str, Any]]:
+    """하이브리드 매칭: 텍스트 유사도 + SCI 점수 결합"""
+    
+    recommendations = await MatchingEngine.get_hybrid_recommendations(
+        db=db,
+        user_id=current_user.id,
+        user_type=current_user.user_type,
+        limit=limit,
+        min_embedding_similarity=min_similarity,
+        embedding_weight=embedding_weight
+    )
+    
+    if not recommendations:
+        # 프로필 확인
+        if current_user.user_type == UserType.SENIOR:
+            profile_check = await db.execute(
+                select(SeniorProfile).where(SeniorProfile.user_id == current_user.id)
+            )
+            profile = profile_check.scalar_one_or_none()
+        else:
+            profile_check = await db.execute(
+                select(YouthProfile).where(YouthProfile.user_id == current_user.id)
+            )
+            profile = profile_check.scalar_one_or_none()
+        
+        if not profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="프로필을 먼저 작성해주세요"
+            )
+        elif not profile.profile_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="프로필 텍스트를 작성해야 하이브리드 매칭을 사용할 수 있습니다"
+            )
+        else:
+            return []
+    
+    # 응답 형식 정리
+    results = []
+    for rec in recommendations:
+        results.append({
+            "candidate_id": str(rec["candidate_id"]),
+            "hybrid_score": round(rec["hybrid_score"], 2),
+            "sci_score": round(rec["sci_score"], 2),
+            "text_similarity": round(rec["embedding_similarity"] * 100, 2),
+            "compatibility": {
+                "philosophy": round(rec["compatibility_details"]["philosophy"], 1),
+                "experience": round(rec["compatibility_details"]["experience"], 1),
+                "financial": round(rec["compatibility_details"]["financial"], 1),
+                "timeline": round(rec["compatibility_details"]["timeline"], 1),
+                "mentorship": round(rec["compatibility_details"]["mentorship"], 1)
+            },
+            "ai_explanation": rec.get("ai_explanation", "매칭 설명을 생성할 수 없습니다")
+        })
+    
+    return results
 
 
 @router.get("/recommendations", response_model=List[MatchResponse])
