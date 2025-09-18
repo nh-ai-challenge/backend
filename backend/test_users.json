@@ -1,0 +1,57 @@
+{
+  "seniors": [
+    {
+      "id": "11522fa9-d9ea-45d8-9a1e-676feae4f0d9",
+      "username": "senior_100",
+      "name": "김민재"
+    },
+    {
+      "id": "5281c79c-6d85-4338-88b2-a02ded8d4157",
+      "username": "senior_101",
+      "name": "최보람"
+    },
+    {
+      "id": "cfb5eeba-f22c-456d-9b7b-a840b3a3f264",
+      "username": "senior_102",
+      "name": "구영수"
+    },
+    {
+      "id": "18e94d30-45f3-4938-92f5-c7812ac16ec6",
+      "username": "senior_103",
+      "name": "이수빈"
+    },
+    {
+      "id": "ee28c4c7-ea1d-4cf1-bf72-08c062f793ad",
+      "username": "senior_104",
+      "name": "송명숙"
+    }
+  ],
+  "youths": [
+    {
+      "id": "c5542bac-8ffd-4aa2-9697-2320af9c67eb",
+      "username": "youth_100",
+      "name": "김영철"
+    },
+    {
+      "id": "3a8603b1-157f-4211-a38e-36779485181c",
+      "username": "youth_101",
+      "name": "이채원"
+    },
+    {
+      "id": "f10ac874-6b82-4564-baab-247f2855ebfa",
+      "username": "youth_102",
+      "name": "백미영"
+    },
+    {
+      "id": "e4a7fa9e-7e31-4c75-9357-c02cce342eaa",
+      "username": "youth_103",
+      "name": "김예지"
+    },
+    {
+      "id": "e337db55-cbb9-4d18-89ff-ca3e2dc33962",
+      "username": "youth_104",
+      "name": "김현주"
+    }
+  ],
+  "timestamp": "1973-02-23 04:07:05.625478"
+}
