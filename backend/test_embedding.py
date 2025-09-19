@@ -53,7 +53,7 @@ def test_embedding_service():
     empty_embedding = EmbeddingService.generate_embedding("")
     print(f"빈 텍스트 임베딩: {empty_embedding}")
     
-    print("\n✅ 임베딩 서비스 테스트 완료")
+    print("\n임베딩 서비스 테스트 완료")
     return True
 
 def test_gemini_service():
@@ -64,7 +64,7 @@ def test_gemini_service():
     # API 키 확인
     from app.core.config import settings
     if not settings.GEMINI_API_KEY:
-        print("⚠️  GEMINI_API_KEY가 설정되지 않았습니다.")
+        print("GEMINI_API_KEY가 설정되지 않았습니다.")
         return False
     
     print(f"API 키 설정됨: {settings.GEMINI_API_KEY[:10]}...")
@@ -86,9 +86,9 @@ def test_gemini_service():
             print("생성된 요약:")
             print(summary)
         else:
-            print("⚠️  요약 생성 실패")
+            print("요약 생성 실패")
     except Exception as e:
-        print(f"❌ 오류 발생: {e}")
+        print(f"오류 발생: {e}")
     
     # 2. 궁합 분석 테스트
     print("\n[궁합 분석 테스트]")
@@ -101,11 +101,11 @@ def test_gemini_service():
             print("궁합 분석 결과:")
             print(json.dumps(analysis, indent=2, ensure_ascii=False))
         else:
-            print("⚠️  궁합 분석 실패")
+            print("궁합 분석 실패")
     except Exception as e:
-        print(f"❌ 오류 발생: {e}")
+        print(f"오류 발생: {e}")
     
-    print("\n✅ Gemini 서비스 테스트 완료")
+    print("\nGemini 서비스 테스트 완료")
     return True
 
 if __name__ == "__main__":
@@ -121,5 +121,5 @@ if __name__ == "__main__":
     print("\n" + "=" * 50)
     print("최종 검증 결과")
     print("=" * 50)
-    print(f"임베딩 서비스: {'✅ 정상' if embedding_ok else '❌ 실패'}")
-    print(f"Gemini 서비스: {'✅ 정상' if gemini_ok else '❌ 실패'}")
+    print(f"임베딩 서비스: {'정상' if embedding_ok else '❌ 실패'}")
+    print(f"Gemini 서비스: {'정상' if gemini_ok else '❌ 실패'}")

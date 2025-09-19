@@ -60,7 +60,7 @@ def submit_surveys():
     
     if login_response.status_code == 200:
         cookies = login_response.cookies
-        print(f"✅ 시니어 로그인 성공: {login_response.json()['name']}")
+        print(f"시니어 로그인 성공: {login_response.json()['name']}")
         
         # 설문 제출
         survey_response = requests.post(
@@ -71,11 +71,11 @@ def submit_surveys():
         
         if survey_response.status_code == 200:
             result = survey_response.json()
-            print(f"✅ 시니어 설문 제출 성공")
+            print(f"시니어 설문 제출 성공")
             print(f"  - 프로필 ID: {result.get('profile_id')}")
             print(f"  - 철학 점수: {result.get('philosophy_score')}")
         else:
-            print(f"❌ 설문 제출 실패: {survey_response.text}")
+            print(f"설문 제출 실패: {survey_response.text}")
     
     # 2. 청년 로그인 및 설문 제출  
     print("\n[청년 설문 제출]")
@@ -86,7 +86,7 @@ def submit_surveys():
     
     if login_response.status_code == 200:
         cookies = login_response.cookies
-        print(f"✅ 청년 로그인 성공: {login_response.json()['name']}")
+        print(f"청년 로그인 성공: {login_response.json()['name']}")
         
         # 설문 제출
         survey_response = requests.post(
@@ -97,11 +97,11 @@ def submit_surveys():
         
         if survey_response.status_code == 200:
             result = survey_response.json()
-            print(f"✅ 청년 설문 제출 성공")
+            print(f"청년 설문 제출 성공")
             print(f"  - 프로필 ID: {result.get('profile_id')}")
             print(f"  - 철학 점수: {result.get('philosophy_score')}")
         else:
-            print(f"❌ 설문 제출 실패: {survey_response.text}")
+            print(f"설문 제출 실패: {survey_response.text}")
     
     print("\n" + "=" * 50)
     print("완료")
